@@ -10,6 +10,7 @@
 - 支持按列名模糊匹配提取数据
 - 支持转换为 CSV 格式
 - 检测文件行列数一致性
+- 显示文件列名和对应列号
 
 ## 使用方法
 
@@ -28,6 +29,9 @@
 
 # 检测文件行列数一致性
 ./detect_delim.sh <文件路径> check
+
+# 显示列名和对应列号
+./detect_delim.sh <文件路径> head
 ```
 
 ## 使用示例
@@ -47,6 +51,9 @@
 
 # 检查文件结构一致性
 ./detect_delim.sh data.csv check
+
+# 显示列名和对应列号
+./detect_delim.sh data.csv head
 ```
 
 ## 依赖

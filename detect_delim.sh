@@ -8,6 +8,7 @@ if [ $# -lt 1 ]; then
     echo "  $0 <文件路径> <列名,...>"
     echo "  $0 <文件路径> csv"
     echo "  $0 <文件路径> check"
+    echo "  $0 <文件路径> head"
     exit 1
 fi
 
@@ -63,6 +64,20 @@ esac
 # 仅检测分隔符
 if [ -z "$arg2" ]; then
     echo "$delim"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# 新增功能：输出列名和对应的列数
+if [ "$arg2" = "head" ]; then
+    awk -v FS="$awk_delim" '
+    NR==1 {
+        print "列名和对应的列号:"
+        for(i=1; i<=NF; i++) {
+            print i ": " $i
+        }
+        exit
+    }' "$src"
     rm -f "$tmpfile"
     exit 0
 fi
