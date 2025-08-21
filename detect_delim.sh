@@ -9,12 +9,37 @@ if [ $# -lt 1 ]; then
     echo "  $0 <文件路径> csv"
     echo "  $0 <文件路径> check"
     echo "  $0 <文件路径> head"
+    echo "  $0 <文件路径> split [分隔符]"
+    echo "  $0 \"字符串\" split [分隔符]"
     exit 1
 fi
 
 file="$1"
 arg2="$2"
+arg3="$3"
 tmpfile=$(mktemp)
+
+# 字符串拆分功能
+if [ "$arg2" = "split" ]; then
+    # 如果第一个参数不是文件，则作为字符串处理
+    if [ ! -f "$file" ]; then
+        input_string="$file"
+        # 默认分隔符：中文逗号、英文逗号、分号、竖线、空格
+        if [ -n "$arg3" ]; then
+            split_delim="$arg3"
+        else
+            split_delim="[、,;| ]+"
+        fi
+        
+        echo "$input_string" | awk -v RS="$split_delim" '{
+            if(NF > 0 && $0 != "") {
+                gsub(/^[ \t]+|[ \t]+$/, "", $0)  # 去除首尾空白
+                if($0 != "") print $0
+            }
+        }'
+        exit 0
+    fi
+fi
 
 if [ ! -f "$file" ]; then
     echo "文件不存在: $file"
@@ -78,6 +103,29 @@ if [ "$arg2" = "head" ]; then
         }
         exit
     }' "$src"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# 文件内容拆分功能
+if [ "$arg2" = "split" ]; then
+    # 默认分隔符：中文逗号、英文逗号、分号、竖线、空格
+    if [ -n "$arg3" ]; then
+        split_delim="$arg3"
+    else
+        split_delim="[、,;| ]+"
+    fi
+    
+    awk -v delim="$split_delim" '{
+        # 将整行按分隔符拆分
+        gsub(delim, "\n", $0)
+        print $0
+    }' "$src" | awk '{
+        if(NF > 0 && $0 != "") {
+            gsub(/^[ \t]+|[ \t]+$/, "", $0)  # 去除首尾空白
+            if($0 != "") print $0
+        }
+    }'
     rm -f "$tmpfile"
     exit 0
 fi
