@@ -9,6 +9,9 @@ if [ $# -lt 1 ]; then
     echo "  $0 <文件路径> csv"
     echo "  $0 <文件路径> check"
     echo "  $0 <文件路径> head"
+    echo "  $0 <文件路径> stats"
+    echo "  $0 <文件路径> dedup"
+    echo "  $0 <文件路径> duplicates"
     echo "  $0 <文件路径> split [分隔符]"
     echo "  $0 \"字符串\" split [分隔符]"
     exit 1
@@ -150,6 +153,169 @@ if [ "$arg2" = "check" ]; then
             print "共有 " bad " 行列数不同 (分隔符: " sym ")"
         else
             print "所有行列数相同 (分隔符: " sym ")"
+    }' "$src"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# stats 功能：数据统计分析
+if [ "$arg2" = "stats" ]; then
+    echo "=== 文件统计信息 ==="
+    echo "分隔符: $delim"
+    echo "编码: $encoding"
+    
+    # 获取文件基本信息
+    file_size=$(wc -c < "$file" | tr -d ' ')
+    if [ "$file_size" -gt 1073741824 ]; then
+        size_display=$(awk "BEGIN {printf \"%.2fGB\", $file_size/1073741824}")
+    elif [ "$file_size" -gt 1048576 ]; then
+        size_display=$(awk "BEGIN {printf \"%.2fMB\", $file_size/1048576}")
+    elif [ "$file_size" -gt 1024 ]; then
+        size_display=$(awk "BEGIN {printf \"%.2fKB\", $file_size/1024}")
+    else
+        size_display="${file_size}B"
+    fi
+    echo "文件大小: $size_display"
+    
+    awk -v FS="$awk_delim" '
+    NR==1 {
+        total_cols = NF
+        print "总列数: " total_cols
+        # 保存列名
+        for(i=1; i<=NF; i++) {
+            headers[i] = $i
+        }
+        next
+    }
+    {
+        total_rows++
+        # 统计每列的数据
+        for(i=1; i<=NF; i++) {
+            if($i == "" || $i ~ /^[ \t]*$/) {
+                empty_count[i]++
+            } else {
+                non_empty_count[i]++
+                # 检测数据类型
+                if($i ~ /^-?[0-9]+$/) {
+                    numeric_count[i]++
+                } else if($i ~ /^-?[0-9]*\.[0-9]+$/) {
+                    float_count[i]++
+                } else {
+                    text_count[i]++
+                }
+                # 记录唯一值
+                unique_values[i,$i] = 1
+            }
+        }
+        # 检测重复行
+        if(seen[$0]++) {
+            duplicate_rows++
+        }
+    }
+    END {
+        print "总行数: " total_rows " (不含表头)"
+        print "重复行数: " (duplicate_rows ? duplicate_rows : 0)
+        print ""
+        print "=== 各列统计 ==="
+        
+        for(i=1; i<=total_cols; i++) {
+            print "列 " i " (" headers[i] "):"
+            printf "  空值: %d (%.1f%%)\n", 
+                (empty_count[i] ? empty_count[i] : 0), 
+                (empty_count[i] ? empty_count[i]*100/total_rows : 0)
+            
+            # 统计唯一值数量
+            unique_count = 0
+            for(key in unique_values) {
+                split(key, arr, SUBSEP)
+                if(arr[1] == i) unique_count++
+            }
+            printf "  唯一值: %d\n", unique_count
+            
+            # 数据类型分析
+            total_non_empty = (non_empty_count[i] ? non_empty_count[i] : 0)
+            if(total_non_empty > 0) {
+                num_count = (numeric_count[i] ? numeric_count[i] : 0)
+                float_count_val = (float_count[i] ? float_count[i] : 0)
+                text_count_val = (text_count[i] ? text_count[i] : 0)
+                
+                if(num_count == total_non_empty) {
+                    print "  数据类型: 整数"
+                } else if((num_count + float_count_val) == total_non_empty) {
+                    print "  数据类型: 数值"
+                } else if(text_count_val == total_non_empty) {
+                    print "  数据类型: 文本"
+                } else {
+                    print "  数据类型: 混合"
+                }
+            } else {
+                print "  数据类型: 全空"
+            }
+            print ""
+        }
+    }' "$src"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# dedup 功能：去除重复行
+if [ "$arg2" = "dedup" ]; then
+    awk -v FS="$awk_delim" '
+    NR==1 { print; next }  # 保留表头
+    !seen[$0]++           # 只输出未见过的行
+    ' "$src"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# duplicates 功能：检测和显示重复行
+if [ "$arg2" = "duplicates" ]; then
+    echo "=== 重复行检测结果 ==="
+    echo "分隔符: $delim"
+    echo ""
+    
+    awk -v FS="$awk_delim" '
+    NR==1 {
+        header = $0
+        next
+    }
+    {
+        # 统计每行出现次数
+        count[$0]++
+        # 记录行号
+        if(line_nums[$0] == "") {
+            line_nums[$0] = NR
+        } else {
+            line_nums[$0] = line_nums[$0] "," NR
+        }
+    }
+    END {
+        total_duplicates = 0
+        duplicate_groups = 0
+        
+        print "表头: " header
+        print ""
+        
+        # 显示重复行组
+        for(line in count) {
+            if(count[line] > 1) {
+                duplicate_groups++
+                total_duplicates += count[line]
+                printf "重复组 %d (出现 %d 次):\n", duplicate_groups, count[line]
+                printf "行号: %s\n", line_nums[line]
+                printf "内容: %s\n", line
+                print ""
+            }
+        }
+        
+        if(duplicate_groups == 0) {
+            print "没有发现重复行"
+        } else {
+            printf "总结: 共有 %d 个重复组，涉及 %d 行数据\n", duplicate_groups, total_duplicates
+            unique_lines = NR - 1 - (total_duplicates - duplicate_groups)
+            printf "唯一行数: %d\n", unique_lines
+            printf "重复率: %.2f%%\n", (total_duplicates - duplicate_groups) * 100 / (NR - 1)
+        }
     }' "$src"
     rm -f "$tmpfile"
     exit 0
