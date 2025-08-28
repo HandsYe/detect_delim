@@ -233,8 +233,3 @@ make clean && make  # 清理重新编译
 ---
 
 ⭐ 如果这个工具对您有帮助，请给我们一个星标！
-
-🔗 **相关工具**
-- [bioawk](https://github.com/lh3/bioawk) - 生物信息学专用awk
-- [csvkit](https://csvkit.readthedocs.io/) - CSV处理工具集
-- [seqkit](https://bioinf.shenwei.me/seqkit/) - FASTA/FASTQ处理工具
