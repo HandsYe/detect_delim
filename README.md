@@ -1,236 +1,339 @@
 # detect_delim
 
-一个强大的命令行工具，用于自动检测文件分隔符和编码，支持列提取、格式转换、文件结构检测和字符串处理等功能。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Shell Script](https://img.shields.io/badge/Shell-Bash-green.svg)](https://www.gnu.org/software/bash/)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](https://github.com/yourusername/detect_delim)
 
-## 功能特性
+🔧 **多功能数据处理工具** - 专为生物信息学和数据分析设计的命令行工具
 
-### 📁 文件处理功能
-- 自动检测文件分隔符（支持 TAB、逗号、分号、管道符、空格等）
-- 自动检测文件编码并转换为 UTF-8
-- 支持按列号提取数据
-- 支持按列名模糊匹配提取数据（不区分大小写）
-- 转换为标准 CSV 格式
-- 检测文件行列数一致性
-- 显示文件列名和对应列号
-- 文件内容按指定分隔符拆分
-- 数据统计分析（行数、列数、数据类型、空值、重复值等）
-- 去除重复行功能
-- 检测和显示重复行（详细分析重复的内容和位置）
+自动检测文件分隔符和编码，支持表格数据分析、FASTA序列处理、字符串拆分等多种功能。无论是处理基因表达数据、管理序列库，还是进行数据质量控制，detect_delim 都能提供高效的解决方案。
 
-### 🔤 字符串处理功能
-- 字符串按分隔符拆分
-- 支持自定义分隔符或使用默认分隔符组合
+## 📑 目录
 
-## 使用方法
+- [核心功能](#-核心功能)
+- [快速开始](#-快速开始)
+- [使用指南](#-使用指南)
+- [实际应用场景](#-实际应用场景)
+- [技术规格](#️-技术规格)
+- [工作原理](#️-工作原理)
+- [支持格式](#-支持格式)
+- [故障排除](#-故障排除)
+- [更多资源](#-更多资源)
 
-### 基本语法
-```bash
-# 文件处理
-./detect_delim.sh <文件路径> [选项]
+## ✨ 核心功能
 
-# 字符串处理
-./detect_delim.sh "字符串" split [分隔符]
-```
+### 🔍 智能数据检测
 
-### 文件操作命令
-```bash
-# 检测文件分隔符
-./detect_delim.sh <文件路径>
+- **自动分隔符识别** - 支持制表符、逗号、分号、管道符、空格等
+- **编码自动转换** - 检测并转换为UTF-8编码
+- **数据完整性检查** - 识别格式不一致的行
 
-# 提取指定列（按列号）
-./detect_delim.sh <文件路径> <列号,...>
+### 📊 数据分析与处理
 
-# 提取指定列（按列名，支持模糊匹配）
-./detect_delim.sh <文件路径> <列名,...>
+- **灵活数据提取** - 按列号或列名（模糊匹配）提取数据
+- **格式标准化** - 转换为标准CSV格式
+- **统计分析** - 详细的数据质量报告（行列统计、数据类型、空值率等）
+- **重复数据管理** - 检测、分析和清理重复数据
 
-# 转换为 CSV 格式
-./detect_delim.sh <文件路径> csv
+### 🧬 生物信息学专用功能
 
-# 检测文件行列数一致性
-./detect_delim.sh <文件路径> check
+- **FASTA序列处理** - 序列提取、批量处理、模糊匹配
+- **基因名称管理** - 智能拆分和整理基因列表
+- **引物库管理** - 高效的序列检索和提取
+- **病原体数据筛选** - 快速定位目标序列
 
-# 显示列名和对应列号
-./detect_delim.sh <文件路径> head
+### 🔤 字符串处理
 
-# 数据统计分析
-./detect_delim.sh <文件路径> stats
+- **智能拆分** - 支持多种分隔符的混合文本处理
+- **自定义分隔符** - 灵活的正则表达式支持
+- **批量文本处理** - 高效处理样本ID、基因名等列表数据
 
-# 去除重复行
-./detect_delim.sh <文件路径> dedup
-
-# 检测和显示重复行
-./detect_delim.sh <文件路径> duplicates
-
-# 文件内容按分隔符拆分
-./detect_delim.sh <文件路径> split [分隔符]
-```
-
-### 字符串操作命令
-```bash
-# 字符串按默认分隔符拆分
-./detect_delim.sh "字符串" split
-
-# 字符串按指定分隔符拆分
-./detect_delim.sh "字符串" split "[分隔符]"
-```
-
-## 使用示例
-
-### 文件处理示例
-```bash
-# 检测 sample.txt 文件的分隔符
-./detect_delim.sh sample.txt
-# 输出: TAB (或 , ; | 等)
-
-# 提取第1列和第3列
-./detect_delim.sh data.csv "1,3"
-
-# 提取包含"name"和"age"的列（不区分大小写模糊匹配）
-./detect_delim.sh data.csv "name,age"
-
-# 转换为 CSV 格式
-./detect_delim.sh data.tsv csv
-
-# 检查文件结构一致性
-./detect_delim.sh data.csv check
-# 输出: 不一致行号:3, 列数:2, 内容: John,Smith
-#       共有 1 行列数不同 (分隔符: ,)
-
-# 显示列名和对应列号
-./detect_delim.sh data.csv head
-# 输出: 列名和对应的列号:
-#       1: Name
-#       2: Age
-#       3: City
-
-# 数据统计分析
-./detect_delim.sh data.csv stats
-# 输出: === 文件统计信息 ===
-#       分隔符: ,
-#       编码: utf-8
-#       文件大小: 224B
-#       总列数: 4
-#       总行数: 8 (不含表头)
-#       重复行数: 2
-#       === 各列统计 ===
-#       列 1 (Name):
-#         空值: 0 (0.0%)
-#         唯一值: 6
-#         数据类型: 文本
-
-# 去除重复行
-./detect_delim.sh data.csv dedup
-# 输出: 去重后的CSV数据（保留表头，移除重复行）
-
-# 检测和显示重复行
-./detect_delim.sh data.csv duplicates
-# 输出: === 重复行检测结果 ===
-#       分隔符: ,
-#       表头: Name,Age,City,Salary
-#       重复组 1 (出现 3 次):
-#       行号: 2,5,8
-#       内容: 张三,25,北京,8000
-#       总结: 共有 1 个重复组，涉及 3 行数据
-#       唯一行数: 6
-#       重复率: 25.00%
-
-# 文件内容按逗号拆分
-./detect_delim.sh data.txt split ","
-```
-
-### 字符串处理示例
-```bash
-# 使用默认分隔符拆分字符串
-./detect_delim.sh "apple、banana,orange;grape|mango" split
-# 输出: apple
-#       banana
-#       orange
-#       grape
-#       mango
-
-# 使用自定义分隔符拆分
-./detect_delim.sh "name=John;age=25;city=NYC" split "[=;]"
-# 输出: name
-#       John
-#       age
-#       25
-#       city
-#       NYC
-
-# 按空格拆分句子
-./detect_delim.sh "Hello world from detect_delim" split " "
-# 输出: Hello
-#       world
-#       from
-#       detect_delim
-```
-
-## 依赖
-
-- `bash`
-- `awk`
-- `iconv`
-- `file`
-- `grep`
-
-## 工作原理
-
-1. **编码检测**：使用 `file` 命令检测文件编码，如果不是 UTF-8，则使用 `iconv` 转换为 UTF-8
-2. **分隔符检测**：通过分析文件第一行中各种分隔符出现的频率来判断文件分隔符
-3. **数据处理**：使用 `awk` 进行列提取、格式转换等操作
-4. **一致性检查**：逐行检查每行的列数是否一致
-
-## 支持的分隔符
-
-### 文件分隔符检测
-- **TAB**: 制表符分隔
-- **逗号 (,)**: 标准CSV格式
-- **分号 (;)**: 欧洲地区常用格式
-- **管道符 (|)**: 数据库导出常用格式
-- **空格 ( )**: 单个空格分隔
-- **MULTISPACE**: 多个连续空格分隔
-
-### 字符串拆分默认分隔符
-- **中文逗号 (、)**
-- **英文逗号 (,)**
-- **分号 (;)**
-- **竖线 (|)**
-- **空格 ( )**
-
-> 字符串拆分支持正则表达式格式的自定义分隔符
-
-## 安装和运行
+## 🚀 快速开始
 
 ### 安装
+
 ```bash
-# 克隆或下载脚本文件
+# 下载脚本
+wget https://raw.githubusercontent.com/yourusername/detect_delim/main/detect_delim.sh
+chmod +x detect_delim.sh
+
+# 或克隆整个仓库
+git clone https://github.com/yourusername/detect_delim.git
+cd detect_delim
 chmod +x detect_delim.sh
 ```
 
+### 基本用法
+
+```bash
+# 查看完整帮助信息
+./detect_delim.sh
+
+# 快速检测文件格式
+./detect_delim.sh data.txt
+
+# 数据质量分析
+./detect_delim.sh data.csv stats
+```
+
+## 📖 使用指南
+
+### 🔍 数据探索与检测
+
+```bash
+./detect_delim.sh data.txt                    # 检测分隔符和编码
+./detect_delim.sh data.csv head               # 查看列结构
+./detect_delim.sh data.csv check              # 检查数据完整性
+./detect_delim.sh data.csv stats              # 详细统计分析
+```
+
+### 📊 数据提取与转换
+
+```bash
+./detect_delim.sh data.csv 1,3,5              # 按列号提取
+./detect_delim.sh data.csv "gene,expression"  # 按列名提取（模糊匹配）
+./detect_delim.sh data.tsv csv                # 转换为CSV格式
+./detect_delim.sh data.csv dedup              # 去除重复行
+```
+
+### 🧬 FASTA序列处理
+
+```bash
+./detect_delim.sh sequences.fa fasta list                    # 列出所有序列
+./detect_delim.sh sequences.fa fasta Stx1                    # 提取单个序列
+./detect_delim.sh sequences.fa fasta "Stx1,Stx2,LT"         # 批量提取
+./detect_delim.sh sequences.fa fasta Staphylococcus output.fa # 保存到文件
+```
+
+### 🔤 字符串处理
+
+```bash
+./detect_delim.sh "Stx1、Stx2、LT" split                     # 拆分基因名
+./detect_delim.sh "sample1,sample2;sample3" split            # 拆分样本ID
+./detect_delim.sh "gene1:gene2:gene3" split ":"              # 自定义分隔符
+```
+
+## 💡 实际应用场景
+
+### 🧬 生物信息学工作流
+
+#### 🦠 病原体检测引物管理
+
+```bash
+# 管理引物库
+./detect_delim.sh primers.fa fasta list                      # 查看所有引物
+./detect_delim.sh primers.fa fasta Staphylococcus_aureus     # 提取金黄色葡萄球菌引物
+./detect_delim.sh primers.fa fasta "Stx,LT,ST" > toxins.fa  # 提取毒素基因引物
+```
+
+#### 🧪 基因表达数据分析
+
+```bash
+# 数据质量控制流程
+./detect_delim.sh expression.txt stats                       # 数据质量评估
+./detect_delim.sh expression.txt duplicates                  # 检查重复样本
+./detect_delim.sh expression.txt dedup > clean_data.csv     # 清理数据
+
+# 提取关键信息
+./detect_delim.sh expression.txt "gene_name,fold_change,pvalue"
+```
+
+#### 🔬 抗性基因分析
+
+```bash
+# 整理抗性基因列表
+./detect_delim.sh "mecA、vanA、blaKPC、NDM-1、OXA-48" split
+
+# 从序列库提取抗性基因
+./detect_delim.sh resistance_db.fa fasta "mecA,vanA,blaKPC" > resistance_genes.fa
+```
+
+#### 📋 样本信息管理
+
+```bash
+# 批量处理样本ID
+./detect_delim.sh "S001,S002,S003;S004|S005 S006" split
+
+# 提取样本关键信息
+./detect_delim.sh sample_metadata.txt "sample_id,species,resistance_profile"
+```
+
+### 📊 数据分析示例
+
+#### 数据质量报告
+
+```bash
+./detect_delim.sh data.csv stats
+```
+
+```
+=== 文件统计信息 ===
+分隔符: ,
+编码: utf-8
+文件大小: 2.5MB
+总列数: 8
+总行数: 1,234 (不含表头)
+重复行数: 23
+
+=== 各列统计 ===
+列 1 (sample_id):
+  空值: 0 (0.0%)
+  唯一值: 1,234
+  数据类型: 文本
+
+列 2 (gene_expression):
+  空值: 15 (1.2%)
+  唯一值: 892
+  数据类型: 数值
+```
+
+#### 重复数据分析
+
+```bash
+./detect_delim.sh data.csv duplicates
+```
+
+```
+=== 重复行检测结果 ===
+重复组 1 (出现 3 次):
+行号: 45,156,789
+内容: SAMPLE_001,BRCA1,2.5,0.001
+
+总结: 共有 8 个重复组，涉及 23 行数据
+重复率: 1.86%
+```
+
+## 🛠️ 技术规格
+
 ### 系统要求
-- **类Unix系统**: Linux、macOS、WSL等
-- **Windows**: 需要安装Git Bash、WSL或类似环境
 
-## 注意事项
+- **操作系统**: Linux, macOS, Windows (WSL/Git Bash)
+- **Shell**: Bash 4.0+
+- **依赖工具**: `awk`, `iconv`, `file`, `grep` (通常系统自带)
 
-### ⚠️ 重要提醒
-- 该工具会创建临时文件用于编码转换，请确保有写入权限
-- 列名匹配是模糊匹配且不区分大小写
-- 分隔符检测基于文件第一行，请确保第一行具有代表性
-- 对于结构不一致的文件，建议先使用 `check` 功能检查
+### 性能特点
 
-### 💡 使用技巧
-- 使用 `head` 命令先查看列结构，再进行列提取
-- 使用 `stats` 功能全面了解数据的质量和结构
-- 使用 `duplicates` 功能详细分析重复数据的分布和位置
-- 使用 `dedup` 功能清理重复数据，提高数据质量
-- 对于大文件，建议先用小样本测试分隔符检测效果
-- 字符串拆分功能可以处理各种混合分隔符的文本
-- `check` 功能会显示具体的不一致行，便于数据清理
-- 可以将 `dedup` 输出重定向到文件：`./detect_delim.sh data.csv dedup > clean_data.csv`
-- 数据清理流程建议：`stats` → `duplicates` → `dedup` → `check`
+- **内存效率**: 流式处理，支持大文件
+- **处理速度**: 优化的awk脚本，快速数据处理
+- **编码兼容**: 自动处理多种字符编码
+- **错误处理**: 友好的错误提示和恢复机制
 
-### 🔧 故障排除
-- 如果编码检测失败，请检查文件是否损坏
-- 如果分隔符检测不准确，可能是文件格式特殊，建议手动指定
-- 权限不足时，检查脚本文件和目标目录的读写权限
+## ⚙️ 工作原理
+
+### 智能检测算法
+
+1. **编码识别** - 使用 `file`命令检测字符编码，自动转换为UTF-8
+2. **分隔符分析** - 统计首行各分隔符频率，智能判断最可能的分隔符
+3. **结构验证** - 逐行检查列数一致性，识别格式异常
+4. **模糊匹配** - 基于正则表达式的灵活列名和序列名匹配
+
+### 数据处理流程
+
+```
+输入文件 → 编码检测 → 分隔符识别 → 数据解析 → 功能处理 → 结果输出
+    ↓           ↓           ↓           ↓           ↓           ↓
+  原始数据   UTF-8转换   格式标准化   结构化数据   业务逻辑   格式化输出
+```
+
+## 📋 支持格式
+
+### 🔍 自动检测的分隔符
+
+| 分隔符         | 描述   | 常见用途            |
+| -------------- | ------ | ------------------- |
+| `TAB`        | 制表符 | TSV文件、数据库导出 |
+| `,`          | 逗号   | 标准CSV文件         |
+| `;`          | 分号   | 欧洲CSV格式         |
+| `              | `      | 管道符              |
+|                | 空格   | 简单文本格式        |
+| `MULTISPACE` | 多空格 | 对齐格式的文本      |
+
+### 🧬 FASTA文件支持
+
+- 标准FASTA格式 (`>header` + 序列)
+- 多行序列支持
+- 模糊序列名匹配
+- 批量序列提取
+
+### 🔤 字符串拆分分隔符
+
+- **默认支持**: `、` `,` `;` `|`  (空格)
+- **自定义**: 支持正则表达式分隔符
+- **混合分隔符**: 一次处理多种分隔符混合的文本
+
+## 🔧 故障排除
+
+### 常见问题
+
+#### 编码问题
+
+```bash
+# 问题：乱码或编码错误
+# 解决：检查原文件编码
+file -bi your_file.txt
+
+# 手动转换编码
+iconv -f GBK -t UTF-8 your_file.txt > converted_file.txt
+```
+
+#### 分隔符检测不准确
+
+```bash
+# 问题：分隔符识别错误
+# 解决：检查文件首行是否具有代表性
+head -1 your_file.txt
+
+# 手动指定处理（通过转换为标准格式）
+./detect_delim.sh your_file.txt csv > standard_format.csv
+```
+
+#### 权限问题
+
+```bash
+# 问题：权限不足
+# 解决：检查脚本执行权限
+chmod +x detect_delim.sh
+
+# 检查文件读取权限
+ls -la your_file.txt
+```
+
+### 性能优化建议
+
+- **大文件处理**: 先用小样本测试，确认格式正确
+- **批量处理**: 使用shell循环处理多个文件
+- **内存优化**: 对于超大文件，考虑分块处理
+- **输出重定向**: 将结果保存到文件以提高效率
+
+```bash
+# 批量处理示例
+for file in *.csv; do
+    ./detect_delim.sh "$file" stats > "${file%.csv}_stats.txt"
+done
+```
+
+## 📚 更多资源
+
+### 📖 详细文档
+
+- [完整使用指南](USAGE.md) - 详细的功能说明和应用场景
+- [API参考](docs/API.md) - 所有参数和选项的详细说明
+- [最佳实践](docs/best-practices.md) - 生物信息学数据处理建议
+
+### 🤝 贡献指南
+
+欢迎提交Issue和Pull Request！
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启Pull Request
+
+### 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+---
+
+⭐ 如果这个工具对您有帮助，请给我们一个星标！

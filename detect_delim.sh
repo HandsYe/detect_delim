@@ -14,6 +14,9 @@ if [ $# -lt 1 ]; then
     echo "  $0 <文件路径> duplicates"
     echo "  $0 <文件路径> split [分隔符]"
     echo "  $0 \"字符串\" split [分隔符]"
+    echo "  $0 <fasta文件> fasta list"
+    echo "  $0 <fasta文件> fasta <序列名1,序列名2,...>"
+    echo "  $0 <fasta文件> fasta <序列名> [输出文件]"
     exit 1
 fi
 
@@ -42,6 +45,99 @@ if [ "$arg2" = "split" ]; then
         }'
         exit 0
     fi
+fi
+
+# FASTA文件处理功能
+if [ "$arg2" = "fasta" ]; then
+    if [ ! -f "$file" ]; then
+        echo "FASTA文件不存在: $file"
+        exit 1
+    fi
+    
+    # 检查是否为FASTA格式
+    if ! head -1 "$file" | grep -q "^>"; then
+        echo "错误: 不是有效的FASTA格式文件"
+        exit 1
+    fi
+    
+    # 列出所有序列名
+    if [ "$arg3" = "list" ]; then
+        echo "=== FASTA文件序列列表 ==="
+        awk '/^>/ {
+            seq_name = substr($0, 2)  # 去掉>符号
+            seq_count++
+            print seq_count ": " seq_name
+        }
+        END {
+            print ""
+            print "总序列数: " seq_count
+        }' "$file"
+        exit 0
+    fi
+    
+    # 提取指定序列
+    if [ -n "$arg3" ]; then
+        output_file="$4"
+        
+        # 处理多个序列名（逗号分隔）
+        if [[ "$arg3" =~ "," ]]; then
+            echo "$arg3" | tr ',' '\n' | while read seq_name; do
+                seq_name=$(echo "$seq_name" | sed 's/^[ \t]*//;s/[ \t]*$//')  # 去除首尾空白
+                if [ -n "$seq_name" ]; then
+                    echo "=== 提取序列: $seq_name ==="
+                    awk -v target="$seq_name" '
+                    /^>/ {
+                        # 检查序列名是否匹配（支持模糊匹配）
+                        seq_header = substr($0, 2)
+                        if(tolower(seq_header) ~ tolower(target)) {
+                            found = 1
+                            print $0
+                        } else {
+                            found = 0
+                        }
+                        next
+                    }
+                    found {
+                        print $0
+                    }' "$file"
+                    echo ""
+                fi
+            done
+        else
+            # 单个序列提取
+            seq_name="$arg3"
+            result=$(awk -v target="$seq_name" '
+            /^>/ {
+                seq_header = substr($0, 2)
+                if(tolower(seq_header) ~ tolower(target)) {
+                    found = 1
+                    print $0
+                } else {
+                    found = 0
+                }
+                next
+            }
+            found {
+                print $0
+            }' "$file")
+            
+            if [ -n "$result" ]; then
+                if [ -n "$output_file" ]; then
+                    echo "$result" > "$output_file"
+                    echo "序列已保存到: $output_file"
+                else
+                    echo "$result"
+                fi
+            else
+                echo "未找到匹配的序列: $seq_name"
+                echo "提示: 使用 '$0 $file fasta list' 查看所有可用序列"
+            fi
+        fi
+        exit 0
+    fi
+    
+    echo "请指定要提取的序列名或使用 'list' 查看所有序列"
+    exit 1
 fi
 
 if [ ! -f "$file" ]; then
