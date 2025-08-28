@@ -1,0 +1,6 @@
+gene_name,expression_level,p_value,sample_id
+BRCA1,2.5,0.001,S001
+TP53,1.8,0.005,S002
+EGFR,3.2,0.0001,S003
+MYC,2.1,0.01,S004
+BRCA1,2.5,0.001,S001
