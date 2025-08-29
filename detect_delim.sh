@@ -148,13 +148,25 @@ fi
 
 # 编码检测并转换为UTF-8
 encoding=$(file -bi "$file" | sed -n 's/.*charset=\(.*\)$/\1/p' | tr '[:upper:]' '[:lower:]')
-if [ "$encoding" != "utf-8" ]; then
-    iconv -f "$encoding" -t utf-8 "$file" -o "$tmpfile" 2>/dev/null || {
-        echo "编码转换失败: $encoding"
-        rm -f "$tmpfile"
-        exit 1
-    }
-    src="$tmpfile"
+# 处理空编码或未知编码的情况
+if [ -z "$encoding" ] || [ "$encoding" = "unknown-8bit" ] || [ "$encoding" = "binary" ]; then
+    # 尝试检测是否为UTF-8
+    if file "$file" | grep -q "UTF-8"; then
+        encoding="utf-8"
+    else
+        # 默认假设为UTF-8，如果不是会在后续处理中发现
+        encoding="utf-8"
+    fi
+fi
+
+if [ "$encoding" != "utf-8" ] && [ "$encoding" != "us-ascii" ]; then
+    if iconv -f "$encoding" -t utf-8 "$file" -o "$tmpfile" 2>/dev/null; then
+        src="$tmpfile"
+    else
+        # 编码转换失败时，尝试直接使用原文件
+        echo "警告: 编码转换失败 ($encoding)，使用原文件" >&2
+        src="$file"
+    fi
 else
     src="$file"
 fi
@@ -187,19 +199,39 @@ esac
 
 # 仅检测分隔符
 if [ -z "$arg2" ]; then
-    echo "$delim"
+    case "$delim" in
+        TAB) echo "制表符 (\\t)" ;;
+        MULTISPACE) echo "多空格" ;;
+        ,) echo "逗号 (,)" ;;
+        \;) echo "分号 (;)" ;;
+        \|) echo "竖线 (|)" ;;
+        *) echo "$delim" ;;
+    esac
     rm -f "$tmpfile"
     exit 0
 fi
 
 # 新增功能：输出列名和对应的列数
 if [ "$arg2" = "head" ]; then
+    echo "=== 文件结构信息 ==="
+    echo "分隔符: $delim"
+    echo "编码: $encoding"
+    echo ""
     awk -v FS="$awk_delim" '
     NR==1 {
         print "列名和对应的列号:"
         for(i=1; i<=NF; i++) {
             print i ": " $i
         }
+        print ""
+        print "数据预览 (前3行):"
+        print $0
+        next
+    }
+    NR<=3 {
+        print $0
+    }
+    NR>3 {
         exit
     }' "$src"
     rm -f "$tmpfile"
@@ -231,7 +263,21 @@ fi
 
 # 转为CSV
 if [ "$arg2" = "csv" ]; then
-    awk -v FS="$awk_delim" -v OFS="," '{print $0}' "$src"
+    awk -v FS="$awk_delim" '{
+        # 重新构建每行，使用逗号分隔
+        output = ""
+        for(i=1; i<=NF; i++) {
+            if(i > 1) output = output ","
+            # 处理包含逗号或双引号的字段
+            field = $i
+            if(field ~ /[,"]/) {
+                gsub(/"/, "\"\"", field)  # 转义双引号
+                field = "\"" field "\""   # 用双引号包围
+            }
+            output = output field
+        }
+        print output
+    }' "$src"
     rm -f "$tmpfile"
     exit 0
 fi
@@ -420,7 +466,7 @@ fi
 # 判断是列号还是列名
 if [[ "$arg2" =~ ^[0-9,]+$ ]]; then
     # 按列号提取
-    awk -v FS="$awk_delim" -v cols="$arg2" '
+    awk -v FS="$awk_delim" -v OFS="$awk_delim" -v cols="$arg2" '
     BEGIN{n=split(cols, arr, ",")}
     {
         out=""
@@ -432,21 +478,42 @@ if [[ "$arg2" =~ ^[0-9,]+$ ]]; then
     }' "$src"
 else
     # 按列名模糊匹配提取
-    awk -v FS="$awk_delim" -v cols="$arg2" '
+    awk -v FS="$awk_delim" -v OFS="$awk_delim" -v cols="$arg2" '
     NR==1{
         n=split(cols, want, ",")
         for(i=1;i<=NF;i++) {
             for(j=1;j<=n;j++) {
-                if(tolower($i) ~ tolower(want[j])) idx[j] = i
+                # 去除空白字符并进行模糊匹配
+                gsub(/^[ \t]+|[ \t]+$/, "", want[j])
+                gsub(/^[ \t]+|[ \t]+$/, "", $i)
+                if(tolower($i) ~ tolower(want[j]) || tolower(want[j]) ~ tolower($i)) {
+                    idx[j] = i
+                    found[j] = 1
+                }
             }
         }
+        # 输出匹配的列名作为表头
+        out=""
+        for(j=1;j<=n;j++) {
+            if(j>1) out=out OFS
+            if(found[j]) {
+                out=out want[j]
+            } else {
+                out=out "NOT_FOUND"
+            }
+        }
+        print out
         next
     }
     {
         out=""
         for(j=1;j<=n;j++) {
             if(j>1) out=out OFS
-            out=out $idx[j]
+            if(found[j]) {
+                out=out $idx[j]
+            } else {
+                out=out ""
+            }
         }
         print out
     }' "$src"
