@@ -1,0 +1,34 @@
+# 编译输出
+*.o
+*.obj
+*.exe
+detect_delim
+!detect_delim.sh
+!detect_delim.c
+
+# 临时文件
+*.tmp
+*.swp
+*.swo
+*~
+.*.swp
+
+# 测试输出
+test_results.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE文件
+.vscode/
+.idea/
+*.sublime-*
+
+# 日志文件
+*.log
+
+# 备份文件
+*.bak
+*.backup

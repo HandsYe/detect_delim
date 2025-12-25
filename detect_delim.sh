@@ -12,6 +12,7 @@ if [ $# -lt 1 ]; then
     echo "  $0 <文件路径> stats"
     echo "  $0 <文件路径> dedup"
     echo "  $0 <文件路径> duplicates"
+    echo "  $0 <文件路径> random <行数>"
     echo "  $0 <文件路径> split [分隔符]"
     echo "  $0 \"字符串\" split [分隔符]"
     echo "  $0 <fasta文件> fasta list"
@@ -148,11 +149,11 @@ fi
 
 # 编码检测并转换为UTF-8
 encoding=$(file -bi "$file" | sed -n 's/.*charset=\(.*\)$/\1/p' | tr '[:upper:]' '[:lower:]')
-if [ "$encoding" != "utf-8" ]; then
+# us-ascii是UTF-8的子集，无需转换
+if [ "$encoding" != "utf-8" ] && [ "$encoding" != "us-ascii" ] && [ -n "$encoding" ]; then
     iconv -f "$encoding" -t utf-8 "$file" -o "$tmpfile" 2>/dev/null || {
-        echo "编码转换失败: $encoding"
-        rm -f "$tmpfile"
-        exit 1
+        echo "编码转换失败: $encoding" >&2
+        cp "$file" "$tmpfile"
     }
     src="$tmpfile"
 else
@@ -231,7 +232,14 @@ fi
 
 # 转为CSV
 if [ "$arg2" = "csv" ]; then
-    awk -v FS="$awk_delim" -v OFS="," '{print $0}' "$src"
+    awk -v FS="$awk_delim" 'BEGIN{OFS=","} {
+        # 重建每一行，强制使用OFS
+        line = $1
+        for(i=2; i<=NF; i++) {
+            line = line OFS $i
+        }
+        print line
+    }' "$src"
     rm -f "$tmpfile"
     exit 0
 fi
@@ -315,7 +323,7 @@ if [ "$arg2" = "stats" ]; then
         print "=== 各列统计 ==="
         
         for(i=1; i<=total_cols; i++) {
-            print "列 " i " (" headers[i] "):"
+            printf "列 %d (%s):\n", i, headers[i]
             printf "  空值: %d (%.1f%%)\n", 
                 (empty_count[i] ? empty_count[i] : 0), 
                 (empty_count[i] ? empty_count[i]*100/total_rows : 0)
@@ -360,6 +368,67 @@ if [ "$arg2" = "dedup" ]; then
     NR==1 { print; next }  # 保留表头
     !seen[$0]++           # 只输出未见过的行
     ' "$src"
+    rm -f "$tmpfile"
+    exit 0
+fi
+
+# random 功能：随机取N行
+if [ "$arg2" = "random" ]; then
+    if [ -z "$arg3" ]; then
+        echo "错误: 请指定要随机抽取的行数"
+        echo "用法: $0 <文件路径> random <行数>"
+        rm -f "$tmpfile"
+        exit 1
+    fi
+    
+    n_lines="$arg3"
+    
+    # 检查是否为有效数字
+    if ! [[ "$n_lines" =~ ^[0-9]+$ ]]; then
+        echo "错误: 行数必须是正整数"
+        rm -f "$tmpfile"
+        exit 1
+    fi
+    
+    # 获取总行数（不含表头）
+    total_lines=$(awk 'END{print NR-1}' "$src")
+    
+    if [ "$n_lines" -gt "$total_lines" ]; then
+        echo "警告: 请求行数($n_lines)大于数据行数($total_lines)，将返回所有数据行"
+        n_lines=$total_lines
+    fi
+    
+    # 输出表头
+    awk 'NR==1' "$src"
+    
+    # 随机抽取N行（使用shuf或awk实现）
+    if command -v shuf &> /dev/null; then
+        # 使用shuf命令（更快）
+        awk 'NR>1' "$src" | shuf -n "$n_lines"
+    else
+        # 使用awk实现（兼容性更好）
+        awk -v n="$n_lines" -v seed="$RANDOM" '
+        BEGIN { srand(seed) }
+        NR==1 { next }  # 跳过表头
+        {
+            lines[NR-1] = $0
+            count = NR - 1
+        }
+        END {
+            # Fisher-Yates洗牌算法
+            for(i=count; i>1; i--) {
+                j = int(rand() * i) + 1
+                temp = lines[i]
+                lines[i] = lines[j]
+                lines[j] = temp
+            }
+            # 输出前n行
+            for(i=1; i<=n && i<=count; i++) {
+                print lines[i]
+            }
+        }' "$src"
+    fi
+    
     rm -f "$tmpfile"
     exit 0
 fi

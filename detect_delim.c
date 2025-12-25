@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <time.h>
 
 #define MAX_LINE_LENGTH 65536
 #define MAX_COLUMNS 1000
@@ -69,6 +70,7 @@ void check_file_consistency(const char* filename);
 void show_column_headers(const char* filename);
 void remove_duplicates(const char* filename);
 void show_duplicates(const char* filename);
+void random_sample_lines(const char* filename, int n_lines);
 void split_string(const char* input, const char* delimiter);
 void split_file_content(const char* filename, const char* delimiter);
 void process_fasta_list(const char* filename);
@@ -154,6 +156,18 @@ int main(int argc, char* argv[]) {
         remove_duplicates(filename);
     } else if (strcmp(operation, "duplicates") == 0) {
         show_duplicates(filename);
+    } else if (strcmp(operation, "random") == 0) {
+        if (!param3) {
+            fprintf(stderr, "错误: 请指定要随机抽取的行数\n");
+            fprintf(stderr, "用法: %s <文件路径> random <行数>\n", argv[0]);
+            return 1;
+        }
+        int n_lines = atoi(param3);
+        if (n_lines <= 0) {
+            fprintf(stderr, "错误: 行数必须是正整数\n");
+            return 1;
+        }
+        random_sample_lines(filename, n_lines);
     } else if (strstr(operation, ",") != NULL && strspn(operation, "0123456789,") == strlen(operation)) {
         // 按列号提取
         extract_columns_by_number(filename, operation);
@@ -185,6 +199,7 @@ void show_usage(const char* program_name) {
     printf("  %s <文件路径> stats             # 详细统计分析\n", program_name);
     printf("  %s <文件路径> duplicates        # 检测并显示重复行详情\n", program_name);
     printf("  %s <文件路径> dedup             # 去除重复行\n", program_name);
+    printf("  %s <文件路径> random <行数>     # 随机抽取N行数据\n", program_name);
     printf("\n");
     
     printf("=== 字符串处理 ===\n");
@@ -824,6 +839,65 @@ void show_duplicates(const char* filename) {
         int unique_lines = line_count - (total_duplicates - duplicate_groups);
         printf("唯一行数: %d\n", unique_lines);
         printf("重复率: %.2f%%\n", (float)(total_duplicates - duplicate_groups) * 100.0 / line_count);
+    }
+}
+
+void random_sample_lines(const char* filename, int n_lines) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "无法打开文件: %s\n", filename);
+        return;
+    }
+
+    // 初始化随机数生成器
+    srand((unsigned int)time(NULL));
+
+    char lines[10000][MAX_LINE_LENGTH];
+    int line_count = 0;
+    char line[MAX_LINE_LENGTH];
+    char header[MAX_LINE_LENGTH];
+    int current_line = 0;
+
+    // 读取所有行
+    while (fgets(line, sizeof(line), file) && line_count < 10000) {
+        current_line++;
+        line[strcspn(line, "\r\n")] = 0;
+        
+        if (current_line == 1) {
+            // 保存表头
+            strcpy(header, line);
+            continue;
+        }
+        
+        strcpy(lines[line_count], line);
+        line_count++;
+    }
+    fclose(file);
+
+    // 检查请求的行数
+    if (n_lines > line_count) {
+        fprintf(stderr, "警告: 请求行数(%d)大于数据行数(%d)，将返回所有数据行\n", 
+                n_lines, line_count);
+        n_lines = line_count;
+    }
+
+    // 输出表头
+    printf("%s\n", header);
+
+    // Fisher-Yates洗牌算法随机抽取
+    for (int i = line_count - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        
+        // 交换 lines[i] 和 lines[j]
+        char temp[MAX_LINE_LENGTH];
+        strcpy(temp, lines[i]);
+        strcpy(lines[i], lines[j]);
+        strcpy(lines[j], temp);
+    }
+
+    // 输出前n行
+    for (int i = 0; i < n_lines && i < line_count; i++) {
+        printf("%s\n", lines[i]);
     }
 }
 

@@ -1,0 +1,5 @@
+GeneID	Expression	PValue	SampleType
+BRCA1	2.5	0.001	Tumor
+TP53	1.8	0.005	Normal
+EGFR	3.2	0.0001	Tumor
+MYC	2.1	0.01	Normal
